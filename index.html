@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Rock Paper Scissors</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" media="screen" href="assets/css/reset.css" />
+  <link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" media="screen" href="assets/css/style.css" />
+  <!-- <script src="https://www.gstatic.com/firebasejs/live/3.0/firebase.js"></script> -->
+  <script src="https://www.gstatic.com/firebasejs/5.5.8/firebase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <h2>Rock Paper Scissors</h2>
+    </div>
+    <div class="row">
+      <div class="col-md-8">
+        <div class="card-group">
+          <div class="card">
+            <div class="card-header">
+              <span id="player1-name">Player 1</span>
+              <div class="input-group player1-form">
+                <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
+                  aria-describedby="basic-addon1" id="player1-entry">
+                <div class="input-group-append">
+                  <button class="btn btn-primary" type="submit" id="player1-join">Join</button>
+                </div>
+              </div>
+            </div>
+            <h3>
+              <span id="player1-result"></span>
+            </h3>
+            <div id="player1-text">
+            </div>
+            <div class="card-body">
+              Win: <span id="player1-win-score"></span>
+              Loss: <span id="player1-loss-score"></span>
+              Tie: <span id="player1-tie-score"></span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span id="player2-name">Player 2</span>
+              <div class="input-group player2-form">
+                <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
+                  aria-describedby="basic-addon1" id="player2-entry">
+                <div class="input-group-append">
+                  <button class="btn btn-primary" type="submit" id="player2-join">Join</button>
+                </div>
+              </div>
+            </div>
+            <h3>
+              <span id="player2-result"></span>
+            </h3>
+            <div id="player2-text">
+            </div>
+            <div class="card-body">
+              Win: <span id="player2-win-score"></span>
+              Loss: <span id="player2-loss-score"></span>
+              Tie: <span id="player2-tie-score"></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="col-md-4">
+        Chat Area
+        <div class="input-group chat-room">
+          <input type="text" class="form-control" placeholder="Type a message here" aria-label="" aria-describedby="basic-addon1"
+            id="chat-text"  >
+          <div class="input-group-append">
+            <button class="btn btn-info" type="submit">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // $(document).keyup(userInput);
+  </script>
+  <script src="assets/javascript/app.js"></script>
+
+</body>
+
+</html>
