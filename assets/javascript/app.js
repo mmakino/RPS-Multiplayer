@@ -164,7 +164,9 @@ database.ref(refPlayers).on('child_added', function (childSnapshot) {
   console.log(`${player.name} is added.`);
 });
 
-
+//
+// A player clicks on one of rock/paper/scissors image
+//
 $(".rps").on("click", function (event) {
   event.preventDefault();
 
@@ -188,7 +190,8 @@ $(".rps").on("click", function (event) {
       $(`#${player} > #paper`).animate({ opacity: 0.3 }, "normal");
       $(`#${player} > #scissors`).animate({ opacity: 1.0 }, "normal");
     }
-    // 
+
+    // Add "Go!" button below the RPS images to finalize the selection
     if (!/^Go/.test($(`#player${pID}-ready`).text())) {
       const goButton = $('<button>');
       goButton.text('Go!');
@@ -204,6 +207,9 @@ $(".rps").on("click", function (event) {
   rpsSel = selection;
 });
 
+//
+//
+//
 function rpsSelect() {
   const data = {};
   data[`player${pID}`] = rpsSel;
