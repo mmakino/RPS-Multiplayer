@@ -13,27 +13,30 @@ var config = {
 firebase.initializeApp(config);
 
 //
-// Variables for Firebase
+// Variables for Firebase Reference names
+//
+const refConn = 'connection'; // all connected users
+const refPlayers = 'players'; // current 2 players 
+const refGame = 'game'; // game data
+
+//
+// Variables for referencing database connections
 //
 const database = firebase.database();
-const connectionsRef = database.ref('connection');
+const connectionsRef = database.ref(refConn);
 const connectedRef = database.ref('.info/connected');
 
 //
-//
-//
-let player1, player2;
-
-//
 // Keep track of each user connection
-// Also, each user's unique connection is stored locally before joining a game.
+// Each user's connection key is stored locally before joining a game.
 //
 connectedRef.on("value", function (snap) {
   if (snap.val()) {
-    var con = connectionsRef.push(true);
-    // save the initial key before the client join the game(i.e. enter a name)
-    sessionStorage.setItem('connKey', con.key);
-    con.onDisconnect().remove();
+    const conn = connectionsRef.push(true);
+
+    // save the connection key before joining the game(i.e. enter a name)
+    sessionStorage.setItem(refConn, conn.key);
+    conn.onDisconnect().remove();
   }
 });
 
@@ -41,86 +44,108 @@ connectedRef.on("value", function (snap) {
 // Clean up when a player is disconnected.
 //
 connectionsRef.on("child_removed", function (snapshot) {
-  let userRef = database.ref('users/' + snapshot.key);
-  let playerID;
+  const connID = snapshot.key;
+  const playerRef = database.ref(`${refPlayers}/${connID}`);
 
-  userRef.once('value', (snap) => {
-    if (snap.val()) {
-      playerID = snap.val().playerID;
-    }
+  if (playerRef) {
+    console.log("Removing player ID:" + connID);
+
+    playerRef.remove().then(function () {
+        console.log(`${connID} removed successfully`);
+      })
+      .catch(function (error) {
+        console.log("Remove failed: " + error.message);
+      });
+  } else {
+    console.log("No such player to remove:" + connID);
+  }
+});
+
+//
+// When a player leaves, update the web UI to re-open for a new player entry
+//
+database.ref(refPlayers).on("child_removed", function (snapshot) {
+  const playerID = snapshot.val().id;
+  console.log(`Player ${playerID} has left`);
+  $(`#player${playerID}-name`).text('Player ' + playerID);
+  $(`.player${playerID}-form`).show();
+});
+
+//
+// Add a player to the Firebase.ref(<refPlayers>)
+//
+// PARAMS:
+// name = user entered name
+// playerID = 1 or 2 (left or right side of the web UI)
+//
+function addPlayer(name, playerID) {
+  const userID = sessionStorage.getItem(refConn);
+  database.ref(`${refPlayers}/${userID}`).set({
+    name: name,
+    id: playerID,
+    win: 0,
+    loss: 0,
+    tie: 0
   });
-
-  userRef.remove().then(function () {
-      console.log(`${playerID} removed successfully`);
-      $(`#${playerID}-name`).text(playerID);
-      $(`.${playerID}-form`).show();
-    })
-    .catch(function (error) {
-      console.log("Remove failed: " + error.message);
-    });
-});
-
-class RPSPlayer {
-  constructor(playerID, name) {
-    this.playerID = playerID;
-    this.playerName = name;
-    this.userID = sessionStorage.getItem('connKey');
-    this.win = 0;
-    this.loss = 0;
-    this.tie = 0;
-  }
-
-  addToDatabase() {
-    database.ref('users/' + this.userID).set({
-      name: this.playerName,
-      playerID: this.playerID,
-      win: 0,
-      loss: 0,
-      tie: 0
-    });
-  }
 }
 
 //
+// The number of players currently in <refPlayers>
 //
+function numOfPlayers() {
+  let playersRef = database.ref(refPlayers);
+  let num = 0;
+
+  playersRef.orderByKey().on("value", function (snapshot) {
+    console.log("numOfPlayers " + snapshot.val());
+    num++;
+  });
+  console.log('# of players = ' + num);
+  return num;
+}
+
 //
+// Update the web page as a player enters his/her name
+//
+function playerEntry(playerNum) {
+  const playerName = $(`#player${playerNum}-entry`).val().trim();
+  console.log(`Entry for player${playerNum}: ${playerName}`);
+  addPlayer(playerName, playerNum);
+
+  if (numOfPlayers() < 2) {
+    const num = (playerNum === 1) ? 2 : 1;
+    const entryID = $(`#player${num}-entry`);
+    entryID.attr('placeholder', 'Awaiting for another player to join');
+    entryID.attr('disabled', '');
+  }
+}
+
+// player 1 joins by entering a name 
 $('#player1-join').click(function () {
-  let player1Name = $('#player1-entry').val().trim();
-  console.log("player1 name: " + player1Name);
-
-  player1 = new RPSPlayer('player1', player1Name);
-  player1.addToDatabase();
-
-  if (!player2) {
-    $('#player2-entry').attr('placeholder', 'Awaiting for a player to join');
-    $('#player2-entry').attr('disabled', '');
-  }
-  $(document).keyup(userInput);
+  const playerName = $('#player1-entry').val().trim();
+  console.log("player1 name: " + playerName);
+  addPlayer(playerName, 1);
+  playerEntry(1);
 });
 
+// player 2 joins by entering a name
 $('#player2-join').click(function () {
-  let player2Name = $('#player2-entry').val().trim();
-  console.log("player2 name: " + player2Name);
-
-  player2 = new RPSPlayer('player2', player2Name);
-  player2.addToDatabase();
-
-  if (!player1) {
-    $('#player1-entry').attr('placeholder', 'Awaiting for a player to join');
-    $('#player1-entry').attr('disabled', '');
-  }
-  $(document).keyup(userInput);
+  const playerName = $('#player2-entry').val().trim();
+  console.log("player2 name: " + playerName);
+  addPlayer(playerName, 2);
+  playerEntry(2);
 });
 
-database.ref('users').on("child_added", function (childSnapshot) {
-  let snap = childSnapshot.val();
-  joinTheGame(snap.playerID, snap.name);
+//
+// Update when a player enters into the game play
+//
+database.ref(refPlayers).on('child_added', function (childSnapshot) {
+  const snap = childSnapshot.val();
+  
+  $(`#player${snap.id}-name`).text(snap.name);
+  $(`.player${snap.id}-form`).hide();
+  console.log(`${snap.name} is added.`);
 });
-
-function joinTheGame(playerID, playerName) {
-  $(`#${playerID}-name`).text(playerName);
-  $(`.${playerID}-form`).hide();
-}
 
 function userInput(event) {
   let userGuess = event.key;
