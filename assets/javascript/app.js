@@ -17,7 +17,8 @@ firebase.initializeApp(config);
 //
 const refConn = 'connection'; // all connected users
 const refPlayers = 'players'; // current 2 players 
-const refGame = 'game'; // game data
+const refGame = 'game';       // game data
+const refChat = 'chat';       // chat messages
 
 //
 // Variables for referencing database connections
@@ -25,6 +26,7 @@ const refGame = 'game'; // game data
 const database = firebase.database();
 const connectionsRef = database.ref(refConn);
 const connectedRef = database.ref('.info/connected');
+const chatRef = database.ref(refChat);
 
 let pID; // player ID (1 or 2)
 let rpsSel; // player's current RPS selection
@@ -307,3 +309,29 @@ function rpsMatch(rpsData) {
 
    return result;
 }
+
+$('#chat-btn').click(function(event) {
+  event.preventDefault();
+  let player = $(`#player${pID}-name`).text();
+  const msg = $('<p>');
+
+  if (!player) {
+    player = 'anonymous';
+  }
+  msg.append('<strong>' + player + '</strong>' + ' '
+              + moment().format('MM/DD/YYYY LT'));
+  msg.append('<br>');
+  msg.append($('#chat-text').val());
+  $('#chat-board').append(msg);
+  $('#chat-text').val("");
+
+  // chatRef.push({
+  //   name: player,
+  //   msg: msg,
+  //   dateAdded: moment().format('MM/DD/YYYY LT')
+  // });
+
+  $('#chat-board').animate({
+    scrollTop: $('#chat-board')[0].scrollHeight
+  }, 2000);
+});

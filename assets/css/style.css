@@ -18,3 +18,16 @@
 .result-section {
   text-align: center;
 }
+
+#chat-board {
+  height: 70vh;
+  border: 1px solid #bcbcbc;
+  margin: 0.5%;
+  text-align: left;
+  overflow: auto;
+  /* overflow-y: scroll; */
+}
+
+#chat-text {
+  overflow: visible;
+}
