@@ -313,25 +313,32 @@ function rpsMatch(rpsData) {
 $('#chat-btn').click(function(event) {
   event.preventDefault();
   let player = $(`#player${pID}-name`).text();
-  const msg = $('<p>');
 
   if (!player) {
     player = 'anonymous';
   }
-  msg.append('<strong>' + player + '</strong>' + ' '
-              + moment().format('MM/DD/YYYY LT'));
+
+  chatRef.push({
+    name: player,
+    msg: $('#chat-text').val(),
+    dateAdded: moment().format('MM/DD/YYYY LT')
+  });
+
+  $('#chat-text').val("");  
+});
+
+chatRef.on("child_added", function(snapshot) {
+  const sender = snapshot.val();
+  const msg = $('<p>');
+  const name = $('<strong>');
+
+  name.append(sender.name);
+  msg.append(name);
+  msg.append(sender.dateAdded);
   msg.append('<br>');
-  msg.append($('#chat-text').val());
+  msg.append(sender.msg);
   $('#chat-board').append(msg);
-  $('#chat-text').val("");
-
-  // chatRef.push({
-  //   name: player,
-  //   msg: msg,
-  //   dateAdded: moment().format('MM/DD/YYYY LT')
-  // });
-
   $('#chat-board').animate({
     scrollTop: $('#chat-board')[0].scrollHeight
-  }, 2000);
+  }, 1200);
 });
