@@ -26,6 +26,9 @@ const database = firebase.database();
 const connectionsRef = database.ref(refConn);
 const connectedRef = database.ref('.info/connected');
 
+let pID; // player ID (1 or 2)
+let rpsSel; // player's current RPS selection
+
 //
 // Keep track of each user connection
 // Each user's connection key is stored locally before joining a game.
@@ -43,7 +46,7 @@ connectedRef.on("value", function (snap) {
 //
 // Clean up when a player is disconnected.
 //
-connectionsRef.on("child_removed", function (snapshot) {
+connectionsRef.on("child_removed", function(snapshot) {
   const connID = snapshot.key;
   const playerRef = database.ref(`${refPlayers}/${connID}`);
 
@@ -64,11 +67,23 @@ connectionsRef.on("child_removed", function (snapshot) {
 //
 // When a player leaves, update the web UI to re-open for a new player entry
 //
-database.ref(refPlayers).on("child_removed", function (snapshot) {
+database.ref(refPlayers).on("child_removed", function(snapshot) {
   const playerID = snapshot.val().id;
   console.log(`Player ${playerID} has left`);
   $(`#player${playerID}-name`).text('Player ' + playerID);
   $(`.player${playerID}-form`).show();
+});
+
+//
+// Update the web UI with a player stats
+//
+database.ref(refPlayers).on("child_changed", function(snapshot) {
+  const player = snapshot.val();
+
+  console.log(`Update stats for player ${player.id}`);
+  $(`#player${player.id}-win-score`).text(player.win);
+  $(`#player${player.id}-loss-score`).text(player.loss);
+  $(`#player${player.id}-tie-score`).text(player.tie);
 });
 
 //
@@ -124,62 +139,130 @@ function playerEntry(playerNum) {
 $('#player1-join').click(function () {
   const playerName = $('#player1-entry').val().trim();
   console.log("player1 name: " + playerName);
-  addPlayer(playerName, 1);
   playerEntry(1);
+  pID = 1;
 });
 
 // player 2 joins by entering a name
 $('#player2-join').click(function () {
   const playerName = $('#player2-entry').val().trim();
   console.log("player2 name: " + playerName);
-  addPlayer(playerName, 2);
   playerEntry(2);
+  pID = 2;
 });
 
 //
 // Update when a player enters into the game play
 //
 database.ref(refPlayers).on('child_added', function (childSnapshot) {
-  const snap = childSnapshot.val();
-  
-  $(`#player${snap.id}-name`).text(snap.name);
-  $(`.player${snap.id}-form`).hide();
-  console.log(`${snap.name} is added.`);
+  const player = childSnapshot.val();
+
+  $(`#player${player.id}-name`).text(player.name);
+  $(`.player${player.id}-form`).hide();
+  console.log(`${player.name} is added.`);
 });
 
-function userInput(event) {
-  let userGuess = event.key;
-  let player = (player1) ? player1 : player2;
-  let data = {};
-  data[player.playerID] = userGuess;
-  database.ref('rps').update(data);
+
+$(".rps").on("click", function (event) {
+  event.preventDefault();
+
+  const selection = $(this).attr('id');
+  const player = $(this).parent().attr('id');
+  console.log(`player[${player}] pID[${pID}]`);
+
+  if (player == `player${pID}`) {
+    if (selection === 'rock') {
+      $(`#${player} > #rock`).animate({ opacity: 1.0 }, "normal");
+      $(`#${player} > #paper`).animate({ opacity: 0.3 }, "normal");
+      $(`#${player} > #scissors`).animate({ opacity: 0.3 }, "normal");
+    }
+    else if (selection === 'paper') {
+      $(`#${player} > #rock`).animate({ opacity: 0.3 }, "normal");
+      $(`#${player} > #paper`).animate({ opacity: 1.0 }, "normal");
+      $(`#${player} > #scissors`).animate({ opacity: 0.3 }, "normal");
+    }
+    else if (selection === 'scissors') {
+      $(`#${player} > #rock`).animate({ opacity: 0.3 }, "normal");
+      $(`#${player} > #paper`).animate({ opacity: 0.3 }, "normal");
+      $(`#${player} > #scissors`).animate({ opacity: 1.0 }, "normal");
+    }
+    // 
+    if (!/^Go/.test($(`#player${pID}-ready`).text())) {
+      const goButton = $('<button>');
+      goButton.text('Go!');
+      goButton.addClass('btn btn-primary');
+      goButton.attr('id', `player${pID}-ready`);
+      goButton.attr('type', 'submit');
+      goButton.bind("click", rpsSelect);
+      goButton.insertAfter($(`#player${pID}`));
+    }
+    $(`#player${pID}-result`).text("");
+  }
+
+  rpsSel = selection;
+});
+
+function rpsSelect() {
+  const data = {};
+  data[`player${pID}`] = rpsSel;
+  database.ref(refGame).update(data);
+  $(`#player${pID}-ready`).text('Go! (waiting the opponent)');
 }
 
-database.ref('rps').on('value', (snapshot) => {
+
+database.ref(refGame).on('value', (snapshot) => {
   let selections = snapshot.val();
   console.log("Selections: " + selections);
 
   // Both players made selections
   if (selections && Object.values(selections).length === 2) {
-    rpsMatch(selections);
-    // database.ref('rps').remove();
+    let result = rpsMatch(selections);
+    updateStats(result);
+    database.ref(refGame).remove();
+    $(`#player${pID}-ready`).remove();
+    $('.rps').animate({ opacity: 1.0 }, "normal");
   }
 });
+
+function updateStats(result) {
+  let data = {};
+  const mapID = {};
+
+  database.ref(refPlayers).orderByKey().on("value", function(player) {
+    console.log(`player.key = ${player.key}`);
+    data = player.val();
+    const connIDs = Object.keys(data);
+
+    connIDs.forEach(cKey => {
+      mapID[data[cKey].id] = cKey;
+    });;
+  });
+
+  if (result === 1) { // player 1 won
+    data[mapID[1]].win += 1;
+    data[mapID[2]].loss += 1;
+  }
+  else if (result === 2) { // player 2 won
+    data[mapID[1]].loss += 1;
+    data[mapID[2]].win += 1;
+  }
+  else if (result === 3) { // tie
+    data[mapID[1]].tie += 1;
+    data[mapID[2]].tie += 1;
+  }
+  else {
+    console.log("NOTHING is updated. Result = " + result);
+  }
+  console.log(JSON.stringify(data));
+  console.log(JSON.stringify(mapID));
+  database.ref(refPlayers).update(data);
+}
 
 class RPS {
   constructor() {
     this.player1 = null;
     this.player2 = null;
     this.winCombo = this.winningCombinations();
-    this.toRPS = {
-      'r': 'rock',
-      'p': 'paper',
-      's': 'scissors'
-    }
-  }
-
-  charToRPS(rpsChar) {
-    return this.toRPS[rpsChar.toLowerCase()]
   }
 
   winningCombinations() {
@@ -190,7 +273,7 @@ class RPS {
     }
   }
 
-  winOrLose() {
+  rpsResult() {
     console.log(`1: ${this.player1}, 2: ${this.player2}`);
     if (!this.player1 || !this.player2) {
       return undefined;
@@ -204,28 +287,23 @@ class RPS {
   }
 }
 
-
-// This function is run whenever the user presses a key.
 function rpsMatch(rpsData) {
   let rps = new RPS();
-  let player = (player1) ? player1 : player2;
 
-  rps.player1 = rps.charToRPS(rpsData.player1);
-  rps.player2 = rps.charToRPS(rpsData.player2);
-  winloss = rps.winOrLose();
+  rps.player1 = rpsData.player1;
+  rps.player2 = rpsData.player2;
+  result = rps.rpsResult();
 
-  if (winloss === 1) {
+  if (result === 1) {
     $('#player1-result').text("Won!");
-    player.win++;
-  } else if (winloss === 2) {
+    $('#player2-result').text("Lost :-(");
+   } else if (result === 2) {
     $('#player1-result').text("Lost :-(");
-    player.loss++;
-  } else if (winloss === 3) {
+    $('#player2-result').text("Won!");
+   } else if (result === 3) {
     $('#player1-result').text("tie");
-    player.tie++;
-  }
-  $(`#${player.playerID}-text`).text(rps.player1);
-  $(`#${player.playerID}-win-score`).text(player.win);
-  $(`#${player.playerID}-loss-score`).text(player.loss);
-  $(`#${player.playerID}-tie-score`).text(player.tie);
+    $('#player2-result').text("tie");
+   }
+
+   return result;
 }

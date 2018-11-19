@@ -20,6 +20,8 @@
       <h2>Rock Paper Scissors</h2>
     </div>
     <div class="row">
+
+      <!-- Player1 -->
       <div class="col-md-8">
         <div class="card-group">
           <div class="card">
@@ -33,7 +35,14 @@
                 </div>
               </div>
             </div>
-            <h3>
+            <div class="rps-selection" id="player1">
+              <img alt="ROCK" src="assets/image/rock.png" id="rock" class="rps" class="img-fluid rounded">
+              <img alt="PAPER" src="assets/image/paper.png" id="paper" class="rps" class="img-fluid rounded">
+              <img alt="SCISSORS" src="assets/image/scissors.png" id="scissors" class="rps" class="img-fluid rounded">
+            </div>
+
+            <!-- <button id="go-player1" class="btn btn-primary" type="submit"></button> -->
+            <h3 class="result-section">
               <span id="player1-result"></span>
             </h3>
             <div id="player1-text">
@@ -44,6 +53,8 @@
               Tie: <span id="player1-tie-score"></span>
             </div>
           </div>
+
+          <!-- Player2 -->
           <div class="card">
             <div class="card-header">
               <span id="player2-name">Player 2</span>
@@ -55,7 +66,13 @@
                 </div>
               </div>
             </div>
-            <h3>
+            <div class="rps-selection" id="player2">
+              <img alt="ROCK" src="assets/image/rock.png" id="rock" class="rps" class="img-fluid rounded">
+              <img alt="PAPER" src="assets/image/paper.png" id="paper" class="rps" class="img-fluid rounded">
+              <img alt="SCISSORS" src="assets/image/scissors.png" id="scissors" class="rps" class="img-fluid rounded">
+            </div>
+            <!-- <button id="go-player2" class="btn btn-primary" type="submit"></button> -->
+            <h3 class="result-section">
               <span id="player2-result"></span>
             </h3>
             <div id="player2-text">
@@ -66,19 +83,21 @@
               Tie: <span id="player2-tie-score"></span>
             </div>
           </div>
-
         </div>
       </div>
+
+      <!-- Chat Area -->
       <div class="col-md-4">
         Chat Area
         <div class="input-group chat-room">
           <input type="text" class="form-control" placeholder="Type a message here" aria-label="" aria-describedby="basic-addon1"
-            id="chat-text"  >
+            id="chat-text">
           <div class="input-group-append">
             <button class="btn btn-info" type="submit">Send</button>
           </div>
         </div>
       </div>
+
     </div>
   </div>
 
