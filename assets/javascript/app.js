@@ -208,7 +208,7 @@ $(".rps").on("click", function (event) {
 });
 
 //
-//
+// Update "refGame" reference with a player's selection of rock/paper/scissors
 //
 function rpsSelect() {
   const data = {};
@@ -217,7 +217,9 @@ function rpsSelect() {
   $(`#player${pID}-ready`).text('Go! (waiting the opponent)');
 }
 
-
+//
+// Polls the "refGame" reference for both players inputs
+//
 database.ref(refGame).on('value', (snapshot) => {
   let selections = snapshot.val();
   console.log("Selections: " + selections);
@@ -232,6 +234,9 @@ database.ref(refGame).on('value', (snapshot) => {
   }
 });
 
+//
+// Win/Loss/Tie stats update and display
+//
 function updateStats(result) {
   let data = {};
   const mapID = {};
@@ -266,6 +271,9 @@ function updateStats(result) {
   database.ref(refPlayers).update(data);
 }
 
+//
+// A simple, small class for checking win/loss/tie
+//
 class RPS {
   constructor() {
     this.player1 = null;
@@ -281,6 +289,13 @@ class RPS {
     }
   }
 
+  //
+  // RETURN:
+  //  * undefined == missing either/both players' inputs
+  //  * 1 == player1 won
+  //  * 2 == player2 won
+  //  * 3 == tie
+  //
   rpsResult() {
     console.log(`1: ${this.player1}, 2: ${this.player2}`);
     if (!this.player1 || !this.player2) {
@@ -295,6 +310,13 @@ class RPS {
   }
 }
 
+//
+// Takes r/p/s inputs of two players and update the result display
+//
+// PARAMS:
+//  * rpsData = { player1: rock/paper/scissors,
+//                player2: rock/paper/scissors }
+//
 function rpsMatch(rpsData) {
   let rps = new RPS();
 
@@ -316,6 +338,11 @@ function rpsMatch(rpsData) {
    return result;
 }
 
+//
+// A very basic chat feature
+// Chat name, message, and date are stored in Firebase
+// in order to sync the chat data among multiple users.
+//
 $('#chat-btn').click(function(event) {
   event.preventDefault();
   let player = $(`#player${pID}-name`).text();
@@ -333,6 +360,9 @@ $('#chat-btn').click(function(event) {
   $('#chat-text').val("");  
 });
 
+//
+// Upon a new chat message, update the display on the web page
+//
 chatRef.on("child_added", function(snapshot) {
   const sender = snapshot.val();
   const msg = $('<p>');
