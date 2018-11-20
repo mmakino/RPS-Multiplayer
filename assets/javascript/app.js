@@ -28,8 +28,13 @@ const connectionsRef = database.ref(refConn);
 const connectedRef = database.ref('.info/connected');
 const chatRef = database.ref(refChat);
 
-let pID; // player ID (1 or 2)
+let pID;    // player ID (1 or 2)
 let rpsSel; // player's current RPS selection
+
+
+function opponentID() {
+  return (pID == 1) ? 2 : 1;
+}
 
 //
 // Keep track of each user connection
@@ -49,22 +54,33 @@ connectedRef.on("value", function (snap) {
 // Clean up when a player is disconnected.
 //
 connectionsRef.on("child_removed", function(snapshot) {
-  const connID = snapshot.key;
-  const playerRef = database.ref(`${refPlayers}/${connID}`);
-
-  if (playerRef) {
-    console.log("Removing player ID:" + connID);
-
-    playerRef.remove().then(function () {
-        console.log(`${connID} removed successfully`);
-      })
-      .catch(function (error) {
-        console.log("Remove failed: " + error.message);
-      });
-  } else {
-    console.log("No such player to remove:" + connID);
-  }
+  prunePlayersRef();
 });
+
+//
+// Firebase connection and/or reference event trigger are flaky sometimes,
+// leaving entries of already exited players. So, clean up extra entries if any.
+//
+function prunePlayersRef() {
+  let connectionIDs;
+  let playerIDs = [];
+
+  database.ref(refPlayers).orderByKey().on("value", function(snapshot) {
+    if (snapshot.val()) {
+      playerIDs = Object.keys(snapshot.val());
+    }
+  });
+  connectionsRef.orderByKey().on("value", function(snapshot) {
+    connectionIDs = Object.keys(snapshot.val());
+  });
+
+  playerIDs.forEach((id) => {
+    if (!connectionIDs.includes(id)) {
+      console.log(`${id} does not appear to be connected. Removing.`);
+      database.ref(refPlayers + '/' + id).remove();
+    }
+  });
+}
 
 //
 // When a player leaves, update the web UI to re-open for a new player entry
@@ -74,6 +90,12 @@ database.ref(refPlayers).on("child_removed", function(snapshot) {
   console.log(`Player ${playerID} has left`);
   $(`#player${playerID}-name`).text('Player ' + playerID);
   $(`.player${playerID}-form`).show();
+
+  if (/make your selection/.test($(`#player${opponentID()}-msg`).text())) {
+    $(`#player${opponentID()}-msg`).text('The opponent left!');
+  }
+  $(`.player${playerID}-msg`).text("");
+  $(`.player${opponentID()}-msg`).text("");
 });
 
 //
@@ -113,11 +135,14 @@ function numOfPlayers() {
   let playersRef = database.ref(refPlayers);
   let num = 0;
 
+  prunePlayersRef(); // clean up any extra before counting
+
   playersRef.orderByKey().on("value", function (snapshot) {
     console.log("numOfPlayers " + snapshot.val());
     num++;
   });
   console.log('# of players = ' + num);
+
   return num;
 }
 
@@ -143,6 +168,7 @@ $('#player1-join').click(function () {
   console.log("player1 name: " + playerName);
   playerEntry(1);
   pID = 1;
+  addExitButton();
 });
 
 // player 2 joins by entering a name
@@ -151,12 +177,52 @@ $('#player2-join').click(function () {
   console.log("player2 name: " + playerName);
   playerEntry(2);
   pID = 2;
+  addExitButton();
 });
+
+//
+// Add a leave(exit) button for a player to get out of the game
+//
+function addExitButton() {
+  const exitButton = $('<button>');
+  exitButton.text('leave');
+  exitButton.addClass('btn btn-sm btn-outline-primary');
+  exitButton.attr('id', `player${pID}-exit`);
+  exitButton.attr('type', 'submit');
+  exitButton.bind("click", leaveGame);
+  exitButton.insertAfter($(`#player${pID}-stat`));
+}
+
+// Remove the reference for this player to exit the game
+function leaveGame() {
+  const userID = sessionStorage.getItem(refConn);
+  database.ref(`${refPlayers}/${userID}`).remove();
+  $(`#player${pID}-exit`).remove();
+  $(`#player${pID}-msg`).text("");
+  $(`#player${opponentID()}-msg`).text("");
+}
+
+//
+// Boolean whether a player w/ the userID is one of two players
+//
+function isPlaying(userID = sessionStorage.getItem(refConn)) {
+  let found = false;
+
+  console.log(`checking ${userID} is in the players ref`);
+  database.ref(refPlayers).orderByKey().on("value", function(players) {
+    if (Object.keys(players.val()).includes(userID)) {
+      console.log(`${userID} is found in the players ref`);
+      found = true;
+    }
+  });
+
+  return found;
+}
 
 //
 // Update when a player enters into the game play
 //
-database.ref(refPlayers).on('child_added', function (childSnapshot) {
+database.ref(refPlayers).on('child_added', function(childSnapshot) {
   const player = childSnapshot.val();
 
   $(`#player${player.id}-name`).text(player.name);
@@ -167,8 +233,12 @@ database.ref(refPlayers).on('child_added', function (childSnapshot) {
 //
 // A player clicks on one of rock/paper/scissors image
 //
-$(".rps").on("click", function (event) {
+$(".rps").on("click", function(event) {
   event.preventDefault();
+
+  if (!isPlaying()) {
+    return;
+  }
 
   const selection = $(this).attr('id');
   const player = $(this).parent().attr('id');
@@ -201,7 +271,7 @@ $(".rps").on("click", function (event) {
       goButton.bind("click", rpsSelect);
       goButton.insertAfter($(`#player${pID}`));
     }
-    $(`#player${pID}-result`).text("");
+    $(`#player${pID}-msg`).text("");
   }
 
   rpsSel = selection;
@@ -225,31 +295,51 @@ database.ref(refGame).on('value', (snapshot) => {
   console.log("Selections: " + selections);
 
   // Both players made selections
-  if (selections && Object.values(selections).length === 2) {
-    let result = rpsMatch(selections);
-    updateStats(result);
-    database.ref(refGame).remove();
-    $(`#player${pID}-ready`).remove();
-    $('.rps').animate({ opacity: 1.0 }, "normal");
+  if (selections) {
+    const selectionLength = Object.values(selections).length;
+    if (selectionLength === 2) {
+      let result = rpsMatch(selections);
+      updateStats(result);
+      database.ref(refGame).remove();
+      $(`#player${pID}-ready`).remove();
+      $('.rps').animate({ opacity: 1.0 }, "normal");
+    }
+    else if (selectionLength === 1) {
+      const  msg = "Please make your selection. Your opponent is waiting!";
+      if (`player${pID}` in selections) {
+        $(`#player${opponentID()}-msg`).text(msg);
+      } else {
+        $(`#player${pID}-msg`).text(msg);
+        $(`#player${opponentID()}-msg`).text("Ready and waiting");
+      }      
+    }
   }
 });
 
 //
 // Win/Loss/Tie stats update and display
+// Data of both players will be updated all together
 //
 function updateStats(result) {
   let data = {};
-  const mapID = {};
+  const mapID = {}; // reverse lookup { playerID(1 or 2) => connID(hash) }
 
   database.ref(refPlayers).orderByKey().on("value", function(player) {
     console.log(`player.key = ${player.key}`);
     data = player.val();
+    if (!data) {
+      return;
+    }
     const connIDs = Object.keys(data);
 
     connIDs.forEach(cKey => {
       mapID[data[cKey].id] = cKey;
     });;
   });
+
+  if (Object.keys(mapID).length !== 2) {
+    return;
+  }
 
   if (result === 1) { // player 1 won
     data[mapID[1]].win += 1;
@@ -325,14 +415,14 @@ function rpsMatch(rpsData) {
   result = rps.rpsResult();
 
   if (result === 1) {
-    $('#player1-result').text("Won!");
-    $('#player2-result').text("Lost :-(");
+    $('#player1-msg').text("Won!");
+    $('#player2-msg').text("Lost :-(");
    } else if (result === 2) {
-    $('#player1-result').text("Lost :-(");
-    $('#player2-result').text("Won!");
+    $('#player1-msg').text("Lost :-(");
+    $('#player2-msg').text("Won!");
    } else if (result === 3) {
-    $('#player1-result').text("tie");
-    $('#player2-result').text("tie");
+    $('#player1-msg').text("tie");
+    $('#player2-msg').text("tie");
    }
 
    return result;
