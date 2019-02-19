@@ -35,13 +35,15 @@
           <div class="card">
             <div class="card-header">
               <h3><span id="player1-name">Player 1</span></h3>
-              <div class="input-group player1-form">
-                <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
-                  aria-describedby="basic-addon1" id="player1-entry">
-                <div class="input-group-append">
-                  <button class="btn btn-primary" type="submit" id="player1-join">Join</button>
+              <form id="player1-form">
+                <div class="input-group">
+                  <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
+                    aria-describedby="basic-addon1" id="player1-entry">
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit" id="player1-join">Join</button>
+                  </div>
                 </div>
-              </div>
+              </form>
             </div>
             <div class="rps-selection" id="player1">
               <img alt="ROCK" src="assets/image/rock.png" id="rock" class="rps" class="img-fluid rounded">
@@ -63,13 +65,15 @@
           <div class="card">
             <div class="card-header">
               <h3><span id="player2-name">Player 2</span></h3>
-              <div class="input-group player2-form">
-                <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
-                  aria-describedby="basic-addon1" id="player2-entry">
-                <div class="input-group-append">
-                  <button class="btn btn-primary" type="submit" id="player2-join">Join</button>
+              <form id="player2-form">
+                <div class="input-group">
+                  <input type="text" class="form-control" placeholder="Enter your name to play" aria-label=""
+                    aria-describedby="basic-addon1" id="player2-entry">
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="submit" id="player2-join">Join</button>
+                  </div>
                 </div>
-              </div>
+              </form>
             </div>
 
             <div class="rps-selection" id="player2">
@@ -95,11 +99,13 @@
         <h6><span class="badge badge-info">Chat</span></h6>
         <div id="chat-board"></div>
         <div class="input-group chat-room">
-          <input type="text" class="form-control" placeholder="Type a message here" aria-label="" aria-describedby="basic-addon1"
-            id="chat-text">
-          <div class="input-group-append">
-            <button class="btn btn-info" type="submit" id="chat-btn">Send</button>
-          </div>
+          <form>
+            <input type="text" class="form-control" placeholder="Type a message here" aria-label="" aria-describedby="basic-addon1"
+              id="chat-text">
+            <div class="input-group-append">
+              <button class="btn btn-info" type="submit" id="chat-btn">Send</button>
+            </div>
+          </form>
         </div>
       </div>
 

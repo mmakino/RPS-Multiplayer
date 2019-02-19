@@ -32,8 +32,8 @@ let pID;    // player ID (1 or 2)
 let rpsSel; // player's current RPS selection
 
 
-function opponentID() {
-  return (pID == 1) ? 2 : 1;
+function opponentID(myID = pID) {
+  return (myID == 1) ? 2 : 1;
 }
 
 //
@@ -88,15 +88,32 @@ function prunePlayersRef() {
 database.ref(refPlayers).on("child_removed", function(snapshot) {
   const playerID = snapshot.val().id;
   console.log(`Player ${playerID} has left`);
-  $(`#player${playerID}-name`).text('Player ' + playerID);
-  $(`.player${playerID}-form`).show();
-
-  if (/make your selection/.test($(`#player${opponentID()}-msg`).text())) {
-    $(`#player${opponentID()}-msg`).text('The opponent left!');
+  console.log(`*** pID = ${pID} playerID = ${playerID} ***`);
+  
+  resetPlayerUI(playerID);
+  if (pID !== playerID) {
+    if (/make your selection|Read and wait/.test($(`#player${opponentID()}-msg`).text())) {
+      $(`#player${opponentID()}-msg`).text('The opponent left!');
+    }
+    const opponentEntry = $(`#player${opponentID()}-entry`);
+    opponentEntry.show();
+    opponentEntry.attr('disabled', '');
+    opponentEntry.attr('placeholder', 'Awaiting for another player to join');
   }
-  $(`.player${playerID}-msg`).text("");
-  $(`.player${opponentID()}-msg`).text("");
+  
+  $(`#player${playerID}-msg`).text("");
+  $(`#player${opponentID()}-msg`).text("");
 });
+
+//
+// Reset when a player leaves the game
+//
+function resetPlayerUI(playerID) {
+  $(`#player${playerID}-name`).text('Player ' + playerID);
+  $(`#player${playerID}-entry`).attr('placeholder', 'Enter your name to play');
+  $(`#player${playerID}-entry`).attr('enabled', '');
+  $(`#player${playerID}-join`).attr('enabled', '');
+}
 
 //
 // Update the web UI with a player stats
@@ -138,8 +155,9 @@ function numOfPlayers() {
   prunePlayersRef(); // clean up any extra before counting
 
   playersRef.orderByKey().on("value", function (snapshot) {
-    console.log("numOfPlayers " + snapshot.val());
-    num++;
+    if (snapshot.val()) {
+      num = Object.keys(snapshot.val()).length;
+    }
   });
   console.log('# of players = ' + num);
 
@@ -155,30 +173,57 @@ function playerEntry(playerNum) {
   addPlayer(playerName, playerNum);
 
   if (numOfPlayers() < 2) {
-    const num = (playerNum === 1) ? 2 : 1;
-    const entryID = $(`#player${num}-entry`);
-    entryID.attr('placeholder', 'Awaiting for another player to join');
-    entryID.attr('disabled', '');
+    // const num = (playerNum === 1) ? 2 : 1;
+    const opponentNum = opponentID(playerNum);
+    const opponentEntry = $(`#player${opponentNum}-entry`);
+    
+    opponentEntry.attr('placeholder', 'Awaiting for another player to join');
+    opponentEntry.attr('disabled', '');
+    $(`#player${opponentNum}-join`).attr('disabled', '');
+    $(`#player${playerNum}-join`).attr('disabled', '');
+    $(`#player${playerNum}-entry`).attr('disabled', '');
   }
 }
 
-// player 1 joins by entering a name 
+// player 1 joins by entering a name
+$("#player1-form").submit(function(event) {
+  event.preventDefault();
+  player1Entry();
+});
+
+// player 1 joins by entering a name, clicking the Join button
 $('#player1-join').click(function () {
+  event.preventDefault();
+  player1Entry();
+});
+
+// player 2 joins by entering a name
+$("#player2-form").submit(function(event) {
+  event.preventDefault();
+  player2Entry();
+});
+
+// player 2 joins by entering a name, clicking the Join button
+$('#player2-join').click(function () {
+  event.preventDefault();
+  player2Entry();
+});
+
+function player1Entry() {
   const playerName = $('#player1-entry').val().trim();
   console.log("player1 name: " + playerName);
   playerEntry(1);
   pID = 1;
   addExitButton();
-});
+}
 
-// player 2 joins by entering a name
-$('#player2-join').click(function () {
+function player2Entry() {
   const playerName = $('#player2-entry').val().trim();
   console.log("player2 name: " + playerName);
   playerEntry(2);
   pID = 2;
   addExitButton();
-});
+}
 
 //
 // Add a leave(exit) button for a player to get out of the game
@@ -196,10 +241,15 @@ function addExitButton() {
 // Remove the reference for this player to exit the game
 function leaveGame() {
   const userID = sessionStorage.getItem(refConn);
+  
   database.ref(`${refPlayers}/${userID}`).remove();
+  database.ref(`${refGame}/player${pID}`).remove();
+  resetPlayerUI(pID);
   $(`#player${pID}-exit`).remove();
   $(`#player${pID}-msg`).text("");
   $(`#player${opponentID()}-msg`).text("");
+  $(`#player${pID}-ready`).remove();
+  location.reload();
 }
 
 //
@@ -210,9 +260,15 @@ function isPlaying(userID = sessionStorage.getItem(refConn)) {
 
   console.log(`checking ${userID} is in the players ref`);
   database.ref(refPlayers).orderByKey().on("value", function(players) {
-    if (Object.keys(players.val()).includes(userID)) {
-      console.log(`${userID} is found in the players ref`);
-      found = true;
+    console.log(`players  = ${JSON.stringify(players)}`);
+    if (JSON.stringify(players) !== 'null') {
+      if (Object.keys(players.val()).includes(userID)) {
+        console.log(`${userID} is found in the players ref`);
+        found = true;
+      }
+    }
+    else {
+      console.log(`User ${userID} is NOT found in the players ref`);
     }
   });
 
@@ -226,7 +282,7 @@ database.ref(refPlayers).on('child_added', function(childSnapshot) {
   const player = childSnapshot.val();
 
   $(`#player${player.id}-name`).text(player.name);
-  $(`.player${player.id}-form`).hide();
+  $(`#player${player.id}-form`).hide();
   console.log(`${player.name} is added.`);
 });
 
@@ -292,7 +348,7 @@ function rpsSelect() {
 //
 database.ref(refGame).on('value', (snapshot) => {
   let selections = snapshot.val();
-  console.log("Selections: " + selections);
+  console.log("Selections: " + JSON.stringify(selections));
 
   // Both players made selections
   if (selections) {
@@ -305,13 +361,23 @@ database.ref(refGame).on('value', (snapshot) => {
       $('.rps').animate({ opacity: 1.0 }, "normal");
     }
     else if (selectionLength === 1) {
-      const  msg = "Please make your selection. Your opponent is waiting!";
-      if (`player${pID}` in selections) {
-        $(`#player${opponentID()}-msg`).text(msg);
+      const numP = numOfPlayers();
+      
+      if (numOfPlayers() == 2) {
+        const  msg = "Please make your selection. Your opponent is waiting!";
+        if (`player${pID}` in selections) {
+          $(`#player${opponentID()}-msg`).text(msg);
+        } else {
+          $(`#player${pID}-msg`).text(msg);
+          $(`#player${opponentID()}-msg`).text("Ready and waiting");
+        }      
       } else {
-        $(`#player${pID}-msg`).text(msg);
-        $(`#player${opponentID()}-msg`).text("Ready and waiting");
-      }      
+        if (`player${pID}` in selections) {
+          $(`#player${opponentID()}-msg`).text("Awaiting another player to join...");
+        } else {
+          $(`#player${pID}-msg`).text("");
+        }
+      }
     }
   }
 });
