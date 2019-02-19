@@ -20,8 +20,11 @@ Online multi-player Rock-Paper-Scissors game written in javascript. Firebase is 
   * When you decided on your selection, press "Go!" button. You may change your selection while awaiting the other player's selection.
   * After Win, Loss, or Tie is determined, you can click on one of Rock, Paper, and Scissors image to continue playing.
   * To leave the game, click on "leave" button or simply close the tab/window. __No game stats will be saved__ after leaving the game.
-    * In fact, you can play with blank name! no logging, just for FUN!
-  * Chat messages will be saved (until I decide to delete them manually).
+    * In fact, you can play with blank name! __no logging, just for FUN!__
+  * _Chat messages will be saved (until I decide to delete them manually)_.
+
+##### Comment
+  * This has been my first multi-user game development, and honestly this opportunity made me think in different views in order to handle the interface for multiple users. It was hard but I enjoyed. I still know weak points of this app as I can think of a couple of ways I break this app. So, if you see some embarrassing behavior, please try reloading or let me know.
 
 ### Repository
 ```
