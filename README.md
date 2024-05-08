@@ -4,6 +4,7 @@ Rock Paper Scissors game
 ### Overview
 Online multi-player Rock-Paper-Scissors game written in javascript. Firebase is used in the backend to help sync inputs and display of multiple users.
 * https://mmakino.github.io/RPS-Multiplayer/
+* No longer functional due to the firebase policy change
 
 ### Tools Used
 * Firebase
